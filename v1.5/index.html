@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>iconfont doc</title>
+  <style>
+    .main {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+
+    .title {
+      text-align: center;
+    }
+
+    .prefix-cont {
+      font-size: 20px;
+    }
+
+    .list {
+      padding: 0;
+    }
+
+    .list li {
+      list-style: none;
+      display: inline-block;
+      width: 100px;
+      height: 110px;
+      text-align: center;
+      margin: 2px;
+      overflow: hidden;
+    }
+
+    .icon-name {
+      margin-top: 14px;
+      font-size: 12px;
+    }
+
+    .icon {
+      font-size: 42px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h1 class="title">Iconfont</h1>
+
+    <p class="prefix-cont">
+      Iconfont 前缀: {{prefix}}
+    </p>
+
+    <div>
+      <ul class="list">
+        <!--item-->
+        <li>
+          <span class="{{prefix}} {{iconName}}"></span>
+          <div class="icon-name">iconName</div>
+        </li>
+        <!--/item-->
+      </ul>
+    </div>
+
+  </div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@latest/dist/opentype.min.js"></script>
+<script>
+var iconItem = `
+  <li>
+    <span class="${prefix} ${iconName}"></span>
+    <div class="icon-name">${iconName}</div>
+  </li>
+`;
+
+</script>
+</html>
