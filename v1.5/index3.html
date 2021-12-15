@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>iconfont-doc</title>
+</head>
+<body>
+</body>
+
+<script>
+  // 获取节点
+  var $ = function (note) {
+    return document.querySelector(note)
+  }
+
+
+  // 获取head与body标签对象
+  var $head = $('head')
+  var $body = $('body')
+
+  var opentypeUrl = 'https://cdn.jsdelivr.net/npm/opentype.js@latest/dist/opentype.min.js';
+
+  // html模版代码
+  var getHtmlTpl = function (title = 'iconfont-doc') {
+    return `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>${title}</title>
+    <style>
+      .main {
+        max-width: 880px;
+        margin: 0 auto;
+      }
+
+      .title {
+        text-align: center;
+      }
+
+      .prefix-cont {
+        font-size: 20px;
+      }
+
+      .list {
+        padding: 0;
+      }
+
+      .list li {
+        list-style: none;
+        display: inline-block;
+        width: 100px;
+        height: 110px;
+        text-align: center;
+        margin: 2px;
+        overflow: hidden;
+      }
+
+      .icon-name {
+        margin-top: 14px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="main">
+      <input id="IconfontFile" type="file" accept=".ttf,.woff,.otf">
+      <h1 class="title">Iconfont列表</h1>
+      <p class="prefix-cont">
+        Iconfont 前缀: <span id="IconfontPrefix"></span>
+      </p>
+      <span onclick="doSaveHtml()">download</span>
+      <section>
+        <ul id="IconfontList" class="list">
+          <!--item-->
+          <li>
+            <span class="{{prefix}} {{iconName}}"></span>
+            <div class="icon-name">{{iconName}}</div>
+          </li>
+          <!--/item-->
+        </ul>
+      </section>
+    </section>
+  </body>
+</html>
+    `
+  };
+
+  // icon项html模版
+  var getIconItemHtml = function(htmlTpl) {
+    // 截取icon-item的模版代码：匹配所有从“item-->”和“<!--item”之间的非"^"字符（不分大小写）
+    const reg = /(?<=item\-\-\>)([^\^]+)(?=\<\!\-\-\/item)/gim
+    return (htmlTpl.match(reg)).join()
+  };
+
+  // head代码模版
+  var getHeadHtml = function (htmlTpl) {
+    const reg = /(?<=head\>)([^\^]+)(?=\<\/head)/gim
+    return (htmlTpl.match(reg)).join()
+  };
+
+  // body代码模版
+  var getBodyHtml = function (htmlTpl) {
+    const reg = /(?<=body\>)([^\^]+)(?=\<\/body)/gim
+    return (htmlTpl.match(reg)).join()
+  };
+
+  // 初始化html
+  var initHtml = function () {
+    // 从html模版中截取对应的代码
+    var htmlTpl = getHtmlTpl(),
+        headHtml = getHeadHtml(htmlTpl),
+        bodyHtml = getBodyHtml(htmlTpl),
+        iconItemHtml = getIconItemHtml(htmlTpl);
+    // 清除循环用的代码
+    bodyHtml = bodyHtml.replace(iconItemHtml, '');
+    // 写入html代码
+    $head.innerHTML = headHtml;
+    $body.innerHTML = bodyHtml;
+  }
+
+  // 初始化script
+  var initScript = function () {
+    // 载入opentype
+    var $opentype = document.createElement('script');
+    $opentype.src = opentypeUrl;
+    document.head.append($opentype);
+  }
+
+  // 执行初始化
+  initHtml()
+  initScript()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  var prefix = 'icon'
+  
+  // icon项样式模版
+  function getFontFace(url) {
+    return `
+      @font-face {
+        font-family: 'iconfont';
+        src: url('${url}') format('truetype');
+      }
+
+      .iconfont {
+        font-family: "iconfont" !important;
+        font-size: 32px;
+        font-style: normal;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }`;
+  };
+  // icon项样式
+  function getIconCss(name, value) {
+    return `
+      .icon-${name}:before {
+        content: "\\${value}";
+      }`;
+  };
+
+  // 获取目标对象
+  var $input = $('#IconfontFile');
+  var $iconfontList = $('#IconfontList');
+
+  // 文件选择处理
+  $input.addEventListener('change', getLocalFontFile, false)
+
+  // 获取本地字体文件
+  function getLocalFontFile(ent) {
+    let file = ent.target.files[0];
+    let reader = new FileReader();
+    let icons = null;
+
+    // 文件加载
+    reader.readAsArrayBuffer(file);
+    reader.onload = (e) => {
+      icons = parseIcons(e.target.result);
+      // 设置html代码
+      let htmltpl = getIconHtml(icons.prefix, icons.icons);
+      $iconfontList.innerHTML = htmltpl;
+    }
+
+    // base64 编码，动态加入 @font-face
+    let readerBase64 = new FileReader();
+    readerBase64.readAsDataURL(file);
+    readerBase64.onload = (e) => {
+      let $style = document.createElement('style');
+      let fontFace = getFontFace(e.target.result);
+      let iconCss = '';
+      icons.icons.forEach(iconItem => {
+        iconCss += getIconCss(iconItem.name, iconItem.value);
+      });
+      $style.innerHTML = fontFace + iconCss;
+      document.head.append($style);
+    }
+  };
+
+  // 解析icon
+  function parseIcons(bufferStr, uniqueID = 'iconfont') {
+    let iconList = [];
+    let result = window.opentype.parse(bufferStr);
+    prefix = result.names.uniqueID.en || uniqueID;
+
+    for (let key in result.glyphs.glyphs) {
+      let item = result.glyphs.glyphs[key];
+      if (!item.unicode) {
+        continue
+      } else {
+        iconList.push({
+          name: item.name,
+          value: parseInt(item.unicode).toString(16)
+        });
+      }
+    }
+
+    return {
+      prefix,
+      icons: iconList
+    };
+  };
+
+
+  // 获取完整html
+  function getIconHtml(prefix, iconList = []) {
+    var allHtml = '';
+    if (!Array.isArray(iconList)) {
+      allHtml = '没有正确生成icon';
+      return allHtml;
+    }
+
+    iconList.forEach(e => {
+      allHtml += getIconItemHtml(prefix, e.name, e.value);
+    });
+
+    return allHtml;
+  };
+
+
+function getHtmlText(params) {
+  var $html = document.createElement('html');
+  $html.innerHTML = `
+  <head>
+    <meta charset="utf-8"/>
+    <title>iconfont-doc</title>
+  </head>
+  <body>
+  </body>
+  `
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+  ${$html.innerHTML}
+</html>
+  `
+}
+
+// 保存
+function doSaveHtml(downUrl, fileName = 'icon-docs.html') {
+  let htmlText = getHtmlText();
+
+  let $a = document.createElement('a');
+  document.body.appendChild($a);
+
+  $a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlText);
+  $a.download = fileName;
+  $a.target = '_parent';
+  $a.click();
+  $a.remove();
+};
+
+</script>
+</html>
