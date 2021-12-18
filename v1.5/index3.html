@@ -10,7 +10,7 @@
 <script>
   // 获取节点
   var $ = function (note) {
-    return document.querySelector(note)
+    return document.querySelector(note);
   }
 
   // 获取区间html代码
@@ -19,10 +19,8 @@
     if (!htmlTpl || htmlTpl === '') {
       return console.error('请输入正确的源html代码');
     };
-
     start = start === '' ? htmlTpl[0] : start;
     end = end === '' ? htmlTpl[htmlTpl.length - 1] : end;
-
     if (!start || !end) {
       return console.error('请输入正确的“开始”和“结束”字符');
     };
@@ -44,7 +42,7 @@
     var startText = changeSymbol(symbol, start).join('');
     var endText = changeSymbol(symbol, end).join('');
     eval('var reg = /(?<=' + startText + ')([^\^]+)(?=' + endText + ')/gim;');
-    var texts = htmlTpl.match(reg)
+    var texts = htmlTpl.match(reg);
     return texts && Array.isArray(texts) ? texts.join() : '';
   };
 
@@ -90,11 +88,11 @@
   </head>
   <body>
     <section class="main">
+      <h1 class="title">Iconfont列表</h1>
+
       <!--input-->
       <input id="IconfontFile" type="file" accept=".ttf,.woff,.otf"/>
       <!--/input-->
-
-      <h1 class="title">Iconfont列表</h1>
 
       <!--prefix
       <p class="prefix-cont">
@@ -103,7 +101,7 @@
       -->
 
       <!--download-->
-      <span id="IconfontDownload">download</span>
+      <button id="IconfontDownload">保存本文档</button>
       <!--/download-->
 
       <section>
@@ -125,61 +123,63 @@
 
   // 字体文件解释库
   iconDoc.opentypeUrl = 'https://cdn.jsdelivr.net/npm/opentype.js@latest/dist/opentype.min.js';
-  iconDoc.prefix = 'icon'
+  iconDoc.prefix = 'icon';
 
   // 获取head与body标签对象
   iconDoc.$head = $('head');       // head
   iconDoc.$body = $('body');       // body
+  iconDoc.$iconfontStyle = null;   // iconfontStyle
   iconDoc.$iconfontList = null;    // iconfontList
 
   // 清除无用代码
   iconDoc.removeUseless = function (htmlTpl) {
-    var inputHtml = getSection(this.tpl.htmlTpl, '<!--input-->', '<!--/input-->')
-    var downloadHtml = getSection(this.tpl.htmlTpl, '<!--download-->', '<!--/download-->')
+    var inputHtml = getSection(this.tpl.htmlTpl, '<!--input-->', '<!--/input-->');
+    var downloadHtml = getSection(this.tpl.htmlTpl, '<!--download-->', '<!--/download-->');
     return htmlTpl.replace(inputHtml, '').replace(downloadHtml, '');
-  }
+  };
 
   // 初始化html
   iconDoc.initHtml = function () {
     // 从html模版中截取对应的代码
     this.tpl.headHtml = getSection(this.tpl.htmlTpl, '<head>', '</head>'),
     this.tpl.bodyHtml = getSection(this.tpl.htmlTpl, '<body>', '</body>'),
-    this.tpl.iconItemHtml = getSection(this.tpl.htmlTpl, '<!--item-->', '<!--/item-->')
+    this.tpl.iconItemHtml = getSection(this.tpl.htmlTpl, '<!--item-->', '<!--/item-->');
     // 清除循环用的代码
     this.tpl.bodyHtml = this.tpl.bodyHtml.replace(this.tpl.iconItemHtml, '');
     // 往页面写入html代码
     this.$head.innerHTML = this.tpl.headHtml;
     this.$body.innerHTML = this.tpl.bodyHtml;
-    return 'init html done'
-  }
+    // 设置style标签对象
+    this.$iconfontStyle = document.createElement('style');
+    document.head.append(this.$iconfontStyle);
+  };
 
   // 初始化script
   iconDoc.initScript = function () {
-    // 载入opentype
     var $opentype = document.createElement('script');
     $opentype.src = this.opentypeUrl;
     document.body.append($opentype);
-  }
+  };
 
   // 初始化input
   iconDoc.initInput = function () {
-    // 获取input
     this.$input = $('#IconfontFile');
     this.$input.addEventListener('change', this.getLocalFontFile, false);
     this.$iconfontList = $('#IconfontList');
-  }
+  };
 
   // 初始化下载
   iconDoc.initDownload = function () {
-    // 获取input
     this.$input = $('#IconfontDownload');
     this.$input.addEventListener('click', this.doSaveHtml, false);
-  }
+  };
 
   // 获取本地字体文件
   iconDoc.getLocalFontFile = function(ent) {
     let file = ent.target.files[0];
     let icons = null;
+
+    if (!file) return
 
     // 加载字体文件
     let reader = new FileReader();
@@ -189,21 +189,19 @@
       // 设置html代码
       let iconsHtml = iconDoc.getIconHtml(icons.prefix, icons.icons);
       iconDoc.$iconfontList.innerHTML = iconsHtml;
-    }
 
-    // base64
-    let readerBase64 = new FileReader();
-    readerBase64.readAsDataURL(file);
-    readerBase64.onload = (e) => {
-      let $style = document.createElement('style');
-      let fontFace = iconDoc.getFontFace(e.target.result);
-      let iconCss = '';
-      icons.icons.forEach(iconItem => {
-        iconCss += iconDoc.getIconCss(iconItem.name, iconItem.value);
-      });
-      $style.innerHTML = fontFace + iconCss;
-      document.head.append($style);
-    }
+      // base64
+      let readerBase64 = new FileReader();
+      readerBase64.readAsDataURL(file);
+      readerBase64.onload = (e) => {
+        let fontFace = iconDoc.getFontFace(e.target.result);
+        let iconCss = '';
+        icons.icons.forEach(iconItem => {
+          iconCss += iconDoc.getIconCss(iconItem.name, iconItem.value);
+        });
+        iconDoc.$iconfontStyle.innerHTML = fontFace + iconCss;
+      }
+    };
   };
 
   // 解析icon
@@ -215,7 +213,7 @@
     for (let key in result.glyphs.glyphs) {
       let item = result.glyphs.glyphs[key];
       if (!item.unicode) {
-        continue
+        continue;
       } else {
         iconList.push({
           name: item.name,
@@ -241,7 +239,7 @@
     iconList.forEach(e => {
       allHtml += this.tpl.iconItemHtml
         .replace('{{prefix}}', prefix)                                // 置换模版内的icon前缀
-        .replace(/\{\{iconName\}\}/g, `${iconDoc.prefix}-${e.name}`)  // 置换模版内的icon名称
+        .replace(/\{\{iconName\}\}/g, `${iconDoc.prefix}-${e.name}`);  // 置换模版内的icon名称
     });
 
     return allHtml;
@@ -275,8 +273,8 @@
   iconDoc.doSaveHtml = function(target) {
     var htmlText = iconDoc.tpl.htmlTpl
         .replace(iconDoc.tpl.headHtml, iconDoc.$head.innerHTML)
-        .replace(iconDoc.tpl.iconItemHtml, iconDoc.$iconfontList.innerHTML)
-    htmlText = iconDoc.removeUseless(htmlText)
+        .replace(iconDoc.tpl.iconItemHtml, iconDoc.$iconfontList.innerHTML);
+    htmlText = iconDoc.removeUseless(htmlText);
     // console.log(htmlText)
 
     let $a = document.createElement('a');
@@ -291,12 +289,17 @@
 
   // 初始化代码配置
   iconDoc.init = function () {
-    iconDoc.initHtml()
-    iconDoc.initScript()
-    iconDoc.initInput()
-    iconDoc.initDownload()
-  }
+    iconDoc.initHtml();
+    iconDoc.initScript();
+    iconDoc.initInput();
+    iconDoc.initDownload();
+  };
 
-  iconDoc.init()
+  iconDoc.init();
+
+  // 创建页面对象
+  // var $pageDom = document.createRange().createContextualFragment(iconDoc.tpl.htmlTpl);
+  // console.log($pageDom)
+  // console.log($pageDom.querySelector('#IconfontFile'))
 </script>
 </html>
