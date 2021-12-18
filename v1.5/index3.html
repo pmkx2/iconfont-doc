@@ -16,36 +16,37 @@
   // 获取区间html代码
   var getSection = function (htmlTpl, start, end) {
     var symbol = '<!-->\\/{}[]`~@#$%^&*()_+-=|,.?:;"\''.split('');
-    if (!htmlTpl || htmlTpl === '') return htmlTpl;
-    if ((!start || start === '') || (!end || end === '')) return '';
+    if (!htmlTpl || htmlTpl === '') {
+      return console.error('请输入正确的源html代码');
+    };
 
-    var newStart = []
-    for (let i = 0; i < start.length; i++) {
-      var t = start[i]
-      for (let i2 = 0; i2 < symbol.length; i2++) {
-        if (t === symbol[i2]) {
-          t = '\\' + t;
-          break;
+    start = start === '' ? htmlTpl[0] : start;
+    end = end === '' ? htmlTpl[htmlTpl.length - 1] : end;
+
+    if (!start || !end) {
+      return console.error('请输入正确的“开始”和“结束”字符');
+    };
+
+    var changeSymbol = function(symbol, text) {
+      var textArr = [];
+      for (var i = 0; i < text.length; i++) {
+        for (var i2 = 0, t = text[i]; i2 < symbol.length; i2++) {
+          if (t === symbol[i2]) {
+            t = '\\' + t;
+            break;
+          }
         }
+        textArr.push(t);
       }
-      newStart.push(t)
+      return textArr;
     }
 
-    var newEnd = []
-    for (let i = 0; i < end.length; i++) {
-      var t = end[i]
-      for (let i2 = 0; i2 < symbol.length; i2++) {
-        if (t === symbol[i2]) {
-          t = '\\' + t;
-          break;
-        }
-      }
-      newEnd.push(t)
-    }
-
-    eval('var reg = /(?<=' + newStart.join('') +')([^\^]+)(?=' + newEnd.join('') + ')/gim;')
-    return (htmlTpl.match(reg)).join()
-  }
+    var startText = changeSymbol(symbol, start).join('');
+    var endText = changeSymbol(symbol, end).join('');
+    eval('var reg = /(?<=' + startText + ')([^\^]+)(?=' + endText + ')/gim;');
+    var texts = htmlTpl.match(reg)
+    return texts && Array.isArray(texts) ? texts.join() : '';
+  };
 
   var iconDoc = {
     // 下载时的文件名称
@@ -95,7 +96,7 @@
 
       <h1 class="title">Iconfont列表</h1>
 
-      <!--
+      <!--prefix
       <p class="prefix-cont">
         Iconfont 前缀: <span id="IconfontPrefix"></span>
       </p>
@@ -133,17 +134,17 @@
 
   // 清除无用代码
   iconDoc.removeUseless = function (htmlTpl) {
-    var inputHtml = getSection(this.tpl.htmlTpl, 'input-->', '<!--/input')
-    var downloadHtml = getSection(this.tpl.htmlTpl, 'download-->', '<!--/download')
+    var inputHtml = getSection(this.tpl.htmlTpl, '<!--input-->', '<!--/input-->')
+    var downloadHtml = getSection(this.tpl.htmlTpl, '<!--download-->', '<!--/download-->')
     return htmlTpl.replace(inputHtml, '').replace(downloadHtml, '');
   }
 
   // 初始化html
   iconDoc.initHtml = function () {
     // 从html模版中截取对应的代码
-    this.tpl.headHtml = getSection(this.tpl.htmlTpl, 'head>', '</head'),
-    this.tpl.bodyHtml = getSection(this.tpl.htmlTpl, 'body>', '</body'),
-    this.tpl.iconItemHtml = getSection(this.tpl.htmlTpl, 'item-->', '<!--/item')
+    this.tpl.headHtml = getSection(this.tpl.htmlTpl, '<head>', '</head>'),
+    this.tpl.bodyHtml = getSection(this.tpl.htmlTpl, '<body>', '</body>'),
+    this.tpl.iconItemHtml = getSection(this.tpl.htmlTpl, '<!--item-->', '<!--/item-->')
     // 清除循环用的代码
     this.tpl.bodyHtml = this.tpl.bodyHtml.replace(this.tpl.iconItemHtml, '');
     // 往页面写入html代码
@@ -158,7 +159,6 @@
     var $opentype = document.createElement('script');
     $opentype.src = this.opentypeUrl;
     document.body.append($opentype);
-    return 'init script done'
   }
 
   // 初始化input
@@ -167,7 +167,6 @@
     this.$input = $('#IconfontFile');
     this.$input.addEventListener('change', this.getLocalFontFile, false);
     this.$iconfontList = $('#IconfontList');
-    return 'init input done'
   }
 
   // 初始化下载
@@ -175,16 +174,15 @@
     // 获取input
     this.$input = $('#IconfontDownload');
     this.$input.addEventListener('click', this.doSaveHtml, false);
-    return 'init download done'
   }
 
   // 获取本地字体文件
   iconDoc.getLocalFontFile = function(ent) {
     let file = ent.target.files[0];
-    let reader = new FileReader();
     let icons = null;
 
-    // 文件加载
+    // 加载字体文件
+    let reader = new FileReader();
     reader.readAsArrayBuffer(file);
     reader.onload = (e) => {
       icons = iconDoc.parseIcons(e.target.result);
@@ -242,8 +240,8 @@
 
     iconList.forEach(e => {
       allHtml += this.tpl.iconItemHtml
-            .replace('{{prefix}}', prefix)         // 置换模版内的icon前缀
-            .replace(/\{\{iconName\}\}/g, `${iconDoc.prefix}-${e.name}`)  // 置换模版内的icon名称
+        .replace('{{prefix}}', prefix)                                // 置换模版内的icon前缀
+        .replace(/\{\{iconName\}\}/g, `${iconDoc.prefix}-${e.name}`)  // 置换模版内的icon名称
     });
 
     return allHtml;
