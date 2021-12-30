@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>iconfont-doc</title>
+</head>
+<body>
+</body>
+
+<script>
+  // 获取节点
+  let $ = function (note) {
+    return document.querySelector(note);
+  }
+
+  // 获取区间字符
+  let getSection = function (htmlTpl, start, end) {
+    let symbol = '<!->\\/{}[]`~@#$%^&*()_+=|,.?:;"\''.split('');
+    if (!htmlTpl || htmlTpl === '') {
+      return console.error('请输入正确的源html代码');
+    };
+    start = start === '' ? htmlTpl[0] : start;
+    end = end === '' ? htmlTpl[htmlTpl.length - 1] : end;
+    if (!start || !end) {
+      return console.error('请输入正确的“开始”和“结束”字符');
+    };
+
+    let changeSymbol = function(symbol, text) {
+      let textArr = [];
+      for (let t of text) {
+        for (let t2 of symbol) {
+          if (t === t2) {
+            t = '\\' + t;
+            break;
+          }
+        }
+        textArr.push(t);
+      }
+      return textArr;
+    }
+
+    let reg,
+        startText = changeSymbol(symbol, start).join(''),
+        endText = changeSymbol(symbol, end).join('');
+    eval('reg = /(?<=' + startText + ')([^\^]+)(?=' + endText + ')/gim;');
+    let texts = htmlTpl.match(reg);
+    changeSymbol = null;
+    return texts && Array.isArray(texts) ? texts.join() : '';
+  };
+
+  // 复制icon名称
+  let copyIconName = function (content) {
+
+  };
+
+  let iconDoc = {
+    // 下载时的文件名称
+    fileName: 'icon-docs.html',
+    // 模版代码
+    tpl: {
+      htmlTpl:`
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>iconfont-doc</title>
+    <style>
+      .main {
+        max-width: 880px;
+        margin: 0 auto;
+      }
+      .title {
+        text-align: center;
+      }
+      .prefix-cont {
+        font-size: 20px;
+      }
+      .list {
+        padding: 0;
+      }
+      .list li {
+        position: relative;
+        list-style: none;
+        display: inline-block;
+        width: 100px;
+        height: 110px;
+        text-align: center;
+        margin: 2px;
+        overflow: hidden;
+      }
+      .btn-copy {
+        position: absolute;
+        font-size: 12px;
+        line-height: 12px;
+        padding: 2px 4px;
+        top: 0;
+        right: 0;
+        color: #e70055;
+        background: #e9e9e9;
+        border-radius: 2px;
+        cursor:pointer;
+        display: none;
+      }
+      .list li:hover .btn-copy {
+        display: block;
+      }
+      .icon-name {
+        margin-top: 14px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="main">
+      <h1 class="title">Iconfont列表</h1>
+
+      <!--input-->
+      <input id="IconfontFile" type="file" accept=".ttf,.woff,.otf"/>
+      <!--/input-->
+
+      <!--prefix
+      <p class="prefix-cont">
+        Iconfont 前缀: <span id="IconfontPrefix"></span>
+      </p>
+      -->
+
+      <!--download-->
+      <button id="IconfontDownload">保存本文档</button>
+      <!--/download-->
+
+      <section>
+        <ul id="IconfontList" class="list">
+          <!--item-->
+          <li>
+            <div class="btn-copy" data-icon="{{iconName}}">copy</div>
+            <span class="{{prefix}} {{iconName}}"></span>
+            <div class="icon-name">{{iconName}}</div>
+          </li>
+          <!--/item-->
+        </ul>
+      </section>
+    </section>
+  </body>
+</html>
+    `
+    }
+  };
+
+  // 字体文件解释库
+  iconDoc.opentypeUrl = 'https://cdn.jsdelivr.net/npm/opentype.js@latest/dist/opentype.min.js';
+  iconDoc.prefix = 'icon';
+
+  // 获取head与body标签对象
+  iconDoc.$head = $('head');       // head
+  iconDoc.$body = $('body');       // body
+  iconDoc.$iconfontStyle = null;   // iconfontStyle
+  iconDoc.$iconfontList = null;    // iconfontList
+
+  // 清除无用代码
+  iconDoc.removeUseless = function (htmlTpl) {
+    let inputHtml = getSection(this.tpl.htmlTpl, '<!--input-->', '<!--/input-->');
+    let downloadHtml = getSection(this.tpl.htmlTpl, '<!--download-->', '<!--/download-->');
+    return htmlTpl.replace(inputHtml, '').replace(downloadHtml, '');
+  };
+
+  // 初始化html
+  iconDoc.initHtml = function () {
+    // 从html模版中截取对应的代码
+    this.tpl.headHtml = getSection(this.tpl.htmlTpl, '<head>', '</head>'),
+    this.tpl.bodyHtml = getSection(this.tpl.htmlTpl, '<body>', '</body>'),
+    this.tpl.iconItemHtml = getSection(this.tpl.htmlTpl, '<!--item-->', '<!--/item-->');
+    // 清除循环用的代码
+    this.tpl.bodyHtml = this.tpl.bodyHtml.replace(this.tpl.iconItemHtml, '');
+    // 往页面写入html代码
+    this.$head.innerHTML = this.tpl.headHtml;
+    this.$body.innerHTML = this.tpl.bodyHtml;
+    // 设置style标签对象
+    this.$iconfontStyle = document.createElement('style');
+    document.head.append(this.$iconfontStyle);
+  };
+
+  // 初始化script
+  iconDoc.initScript = function () {
+    let $opentype = document.createElement('script');
+    $opentype.src = this.opentypeUrl;
+    document.body.append($opentype);
+  };
+
+  // 初始化input
+  iconDoc.initInput = function () {
+    this.$input = $('#IconfontFile');
+    this.$input.addEventListener('change', this.getLocalFontFile, false);
+    this.$iconfontList = $('#IconfontList');
+  };
+
+  // 初始化下载
+  iconDoc.initDownload = function () {
+    this.$input = $('#IconfontDownload');
+    this.$input.addEventListener('click', this.doSaveHtml, false);
+  };
+
+  // 获取本地字体文件
+  iconDoc.getLocalFontFile = function(ent) {
+    let file = ent.target.files[0],
+        icons = null;
+
+    if (!file) return
+
+    // 加载字体文件
+    let reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onload = (e) => {
+      icons = iconDoc.parseIcons(e.target.result);
+      // 设置html代码
+      let iconsHtml = iconDoc.getIconHtml(icons.prefix, icons.icons);
+      iconDoc.$iconfontList.innerHTML = iconsHtml;
+
+      // base64
+      let readerBase64 = new FileReader();
+      readerBase64.readAsDataURL(file);
+      readerBase64.onload = (e) => {
+        let fontFace = iconDoc.getFontFace(e.target.result);
+        let iconCss = '';
+        icons.icons.forEach(iconItem => {
+          iconCss += iconDoc.getIconCss(iconItem.name, iconItem.value);
+        });
+        iconDoc.$iconfontStyle.innerHTML = fontFace + iconCss;
+      }
+    };
+  };
+
+  // 解析icon
+  iconDoc.parseIcons = function(bufferStr, uniqueID = 'iconfont') {
+    let iconList = [],
+        result = window.opentype.parse(bufferStr),
+        prefix = result.names.uniqueID.en || uniqueID;
+
+    for (let key in result.glyphs.glyphs) {
+      let item = result.glyphs.glyphs[key]
+      if (!item.unicode) {
+        continue;
+      } else {
+        iconList.push({
+          name: item.name,
+          value: parseInt(item.unicode).toString(16)
+        });
+      }
+    }
+
+    return {
+      prefix,
+      icons: iconList
+    };
+  };
+
+  // 获取完整html
+  iconDoc.getIconHtml = function(prefix, iconList = []) {
+    let allHtml = '';
+    if (!Array.isArray(iconList)) {
+      allHtml = '没有正确生成icon';
+      return allHtml;
+    }
+
+    iconList.forEach(e => {
+      allHtml += this.tpl.iconItemHtml
+        .replace('{{prefix}}', prefix)                                // 置换模版内的icon前缀
+        .replace(/\{\{iconName\}\}/g, `${iconDoc.prefix}-${e.name}`);  // 置换模版内的icon名称
+    });
+
+    return allHtml;
+  };
+
+  // icon项样式模版
+  iconDoc.getFontFace = function(url) {
+    return `
+      @font-face {
+        font-family: 'iconfont';
+        src: url('${url}') format('truetype');
+      }
+
+      .iconfont {
+        font-family: "iconfont" !important;
+        font-size: 32px;
+        font-style: normal;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }`;
+  };
+  // icon项样式
+  iconDoc.getIconCss = function(name, value) {
+    return `
+      .icon-${name}:before {
+        content: "\\${value}";
+      }`;
+  };
+
+  // 保存
+  iconDoc.doSaveHtml = function(target) {
+    let htmlText = iconDoc.tpl.htmlTpl
+        .replace(iconDoc.tpl.headHtml, iconDoc.$head.innerHTML)
+        .replace(iconDoc.tpl.iconItemHtml, iconDoc.$iconfontList.innerHTML);
+    htmlText = iconDoc.removeUseless(htmlText);
+    // console.log(htmlText)
+
+    let $a = document.createElement('a');
+    document.body.appendChild($a);
+
+    $a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlText);
+    $a.download = iconDoc.fileName;
+    $a.target = '_parent';
+    $a.click();
+    $a.remove();
+  };
+
+  // 初始化代码配置
+  iconDoc.init = function () {
+    iconDoc.initHtml();
+    iconDoc.initScript();
+    iconDoc.initInput();
+    iconDoc.initDownload();
+  };
+
+  iconDoc.init();
+
+  // 创建页面对象
+  // let $pageDom = document.createRange().createContextualFragment(iconDoc.tpl.htmlTpl);
+  // console.log($pageDom)
+  // console.log($pageDom.querySelector('#IconfontFile'))
+</script>
+</html>
